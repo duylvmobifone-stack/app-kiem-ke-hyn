@@ -11,17 +11,28 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 💥 ĐỘT PHÁ CSS: Biến đổi hoàn toàn bộ nhận diện Radio Streamlit thành dạng thẻ Tag bấm chạm hiện đại
+# Khóa chết màu nhấn hiển thị (Accent/Primary) từ Đỏ sang Xanh MobiFone
 st.markdown("""
     <style>
     /* Nới rộng không gian hiển thị trên mobile */
     .block-container { padding-top: 0.5rem; padding-bottom: 1rem; padding-left: 0.8rem; padding-right: 0.8rem; }
     
+    /* Khắc phục lỗi lấp dấu chữ: Hạ cỡ chữ tiêu đề App nhỏ gọn */
+    .app-main-title {
+        font-size: 20px !important;
+        font-weight: bold !important;
+        color: #212529;
+        margin-top: 5px;
+        margin-bottom: 15px;
+        text-align: left;
+        line-height: 1.2;
+    }
+    
     /* Thiết kế Banner trạm hiện đại */
     .station-banner {
         background: linear-gradient(135deg, #0056b3 0%, #007bff 100%);
         color: white; padding: 14px; border-radius: 12px;
-        text-align: center; font-weight: bold; font-size: 20px;
+        text-align: center; font-weight: bold; font-size: 18px;
         margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
@@ -32,7 +43,7 @@ st.markdown("""
     .prop-title { font-size: 15px; font-weight: 600; color: #212529; margin-bottom: 2px; margin-top: 5px; }
     .prop-old-val { font-size: 12px; color: #6c757d; margin-bottom: 6px; }
     
-    /* 🎯 ÉP CÁC NÚT RADIO HIỂN THỊ HÀNG NGANG DẠNG THẺ CHẠM (FLEXBOX INLINE) */
+    /* ÉP CÁC NÚT RADIO HIỂN THỊ HÀNG NGANG DẠNG THẺ CHẠM (FLEXBOX INLINE) */
     div[data-testid="stRadio"] > div {
         display: flex !important;
         flex-direction: row !important;
@@ -55,14 +66,19 @@ st.markdown("""
         transition: all 0.2s ease;
     }
     
-    /* Hiệu ứng Sáng đèn Xanh lam khi thuộc tính đó được chọn kích hoạt */
-    div[data-testid="stRadio"] label[data-bv-compressed="true"], 
-    div[data-testid="stRadio"] input[type="radio"]:checked + div p {
+    /* ĐỔI MÀU ĐỎ SANG XANH: Khi nút được TÍCH CHỌN, đổi nền xanh nhạt viền xanh đậm */
+    div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"]:checked + div {
+        background-color: #e6f0fa !important;
+        border: 1.5px solid #007bff !important;
+        border-radius: 20px !important;
+    }
+    
+    div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"]:checked + div p {
         color: #007bff !important;
         font-weight: bold !important;
     }
     
-    /* Ẩn dấu chấm tròn Radio mặc định của trình duyệt để nhìn giống nút bấm thuần túy */
+    /* Ẩn dấu chấm tròn Radio mặc định của trình duyệt */
     div[data-testid="stRadio"] input[type="radio"] { display: none !important; }
     div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] p { font-size: 14px !important; margin: 0 !important; }
     
@@ -71,7 +87,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📱 Kiểm kê tài sản trạm MobiFone")
+st.markdown("<div class='app-main-title'>📱 Kiểm kê tài sản trạm MobiFone</div>", unsafe_allow_html=True)
 
 # Đường dẫn file Google Sheets gốc của Sếp
 sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit"
@@ -167,7 +183,6 @@ try:
         ma_tram = selected_station_data["ma_tram"]
         cells = selected_station_data["cells"]
         
-        # Banner thiết kế phẳng bo góc cực sang trọng
         st.markdown(f"<div class='station-banner'>🏠 TRẠM: {ma_tram}</div>", unsafe_allow_html=True)
         
         tree_structure = {}
@@ -176,6 +191,9 @@ try:
             c_name = headers_row3[col_idx - 1] or f"Trường_{col_idx}"
             c_val = cells.get(col_idx, "Trống")
             
+            if any(err_tag in c_name.upper() for err_tag in ["DWDM", "THIẾT BỊ PE", "ROUTER PE"]):
+                continue
+                
             if p_name not in tree_structure:
                 tree_structure[p_name] = []
             tree_structure[p_name].append({"col_idx": col_idx, "child": c_name, "current_val": c_val})
@@ -183,6 +201,9 @@ try:
         st.write("### 📑 Bước 2: Tích chọn nhanh trạng thái")
         
         for parent_key, child_list in tree_structure.items():
+            if not child_list:
+                continue
+                
             grp_changed = sum(1 for c in child_list if c["col_idx"] in st.session_state["session_updates"])
             expander_title = f"📁 {parent_key} " + (f"({grp_changed} Thay đổi ✏️)" if grp_changed > 0 else "")
             
@@ -199,23 +220,45 @@ try:
                         if v and v.lower() not in ["", "nan", "none", "trống"]:
                             cleaned_set.add(v)
                     
-                    unique_options = sorted(list(cleaned_set))
+                    # 🎯 THUẬT TOÁN SẮP XẾP SỐ THÔNG MINH
+                    numbers_list = []
+                    strings_list = []
+                    
+                    for v in cleaned_set:
+                        # Kiểm tra xem chuỗi có phải là số nguyên hoặc số thập phân không
+                        if re.match(r'^\d+(\.\d+)?$', v):
+                            numbers_list.append(float(v) if '.' in v else int(v))
+                        else:
+                            strings_list.append(v)
+                    
+                    # Sắp xếp danh sách số theo toán học, danh sách chữ theo bảng chữ cái A-Z
+                    numbers_list = sorted(numbers_list)
+                    strings_list = sorted(strings_list)
+                    
+                    # Chuyển đổi ngược danh sách số về chuỗi và gộp lại
+                    unique_options = [str(x) for x in numbers_list] + strings_list
+                    
                     if not unique_options:
                         unique_options = ["Tốt", "Hỏng", "Có", "Không"]
                         
-                    if "Trống" not in unique_options:
-                        unique_options.insert(0, "Trống")
+                    # Đảm bảo chữ "Trống" luôn nằm ở đầu danh sách để dễ chọn
+                    if "Trống" in unique_options:
+                        unique_options.remove("Trống")
+                    unique_options.insert(0, "Trống")
+                    
+                    # Đảm bảo giá trị thực tế của trạm (nếu có sẵn) phải nằm trong danh mục chọn
                     if file_actual_val not in unique_options:
                         unique_options.insert(0, file_actual_val)
                     
+                    # Luôn đặt lựa chọn "Nhập mới" ở vị trí cuối cùng dưới đáy
                     custom_input_trigger = "➕ Nhập mới"
-                    if custom_input_trigger not in unique_options:
-                        unique_options.append(custom_input_trigger)
+                    if custom_input_trigger in unique_options:
+                        unique_options.remove(custom_input_trigger)
+                    unique_options.append(custom_input_trigger)
                         
                     saved_val = st.session_state["session_updates"].get(c_id, file_actual_val)
                     default_idx = unique_options.index(saved_val) if saved_val in unique_options else unique_options.index(custom_input_trigger)
                     
-                    # 🌟 GIAO DIỆN TINH GỌN: Chỉ hiển thị tên thuộc tính và giá trị cũ dạng tag nhỏ mờ
                     st.markdown(f"<div class='prop-title'>{c_name}</div>", unsafe_allow_html=True)
                     st.markdown(f"<div class='prop-old-val'>Hiện trạng: {file_actual_val}</div>", unsafe_allow_html=True)
                     
