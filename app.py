@@ -11,40 +11,39 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Tối ưu CSS để giao diện khít, các nút bấm to rõ không bị trượt trạng thái trên màn hình cảm ứng
+# Tối ưu giao diện di động: Tăng khoảng cách bấm, làm rõ ô nhập liệu bổ sung
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; padding-bottom: 1rem; }
     .station-title { background-color: #007bff; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 15px; }
-    .category-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef; }
     .stRadio > div { background-color: white; padding: 6px; border-radius: 6px; border: 1px solid #dee2e6; margin-bottom: 4px; }
     div.stRadio p { font-size: 15px !important; margin-bottom: 2px !important; }
+    .input-hint { color: #ffc107; font-weight: bold; font-size: 13px; margin-top: -5px; margin-bottom: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📱 Kiểm kê Tài sản Chuẩn hóa - HYN")
+st.title("📱 Kiểm kê Thông minh & Linh hoạt - HYN")
 
-# Link dữ liệu Google Sheets xuất bản dạng CSV của Sếp
+# Đường dẫn file Google Sheets xuất dữ liệu CSV của Sếp
 sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit"
 csv_url = sheet_url.replace('/edit', '/export?format=csv')
 
 
 # ==============================================================================
-# 2. HÀM NẠP VÀ TRÍCH XUẤT DANH SÁCH GIÁ TRỊ TỰ ĐỘNG TỪ EXCEL
+# 2. HÀM NẠP VÀ TRÍCH XUẤT CHUẨN DANH MỤC TOÀN TỈNH
 # ==============================================================================
-@st.cache_data(ttl=5)  # Giảm time cache để đồng bộ tức thì khi file sheets thay đổi
+@st.cache_data(ttl=5)
 def load_and_parse_sheets():
     df_raw = pd.read_csv(csv_url, header=None, dtype=str).fillna("")
     
-    # Đọc chính xác cấu trúc tối đa 124 cột của file HYN
     max_cols = min(df_raw.shape[1], 124)
     df_raw = df_raw.iloc[:, :max_cols]
     
-    # Chuẩn hóa hàng tiêu đề 2 (Mục cha) và hàng tiêu đề 3 (Thuộc tính con)
+    # Đọc Hàng tiêu đề 2 (Mục cha) và Hàng tiêu đề 3 (Thuộc tính con)
     row2 = [str(val).strip() for val in df_raw.iloc[1]]
     row3 = [str(val).strip() for val in df_raw.iloc[2]]
     
-    # Điền khuyết danh mục cha (Forward Fill)
+    # Tự động điền tên danh mục cha (Forward Fill)
     current_parent = "Thông tin chung"
     for i in range(len(row2)):
         if row2[i] != "" and not row2[i].startswith("Unnamed"):
@@ -52,7 +51,7 @@ def load_and_parse_sheets():
         else:
             row2[i] = current_parent
 
-    # Phân tích danh sách trạm (Bắt đầu dữ liệu thực tế từ hàng chỉ số 4 trở đi)
+    # Trích xuất dữ liệu của từng trạm (Bắt đầu từ hàng chỉ số 4)
     data_rows = []
     for r_idx in range(4, df_raw.shape[0]):
         ma_tram = str(df_raw.iloc[r_idx, 1]).strip()
@@ -75,21 +74,19 @@ def load_and_parse_sheets():
 try:
     headers_row2, headers_row3, rows_data, df_total_raw = load_and_parse_sheets()
     
-    # Khởi tạo session lưu trữ cập nhật nếu chưa có
+    # Khởi tạo bộ lưu trữ đệm
     if "session_updates" not in st.session_state:
         st.session_state["session_updates"] = {}
-        
-    # Tạo biến lưu trữ trạm hiện tại đang chọn để bắt sự kiện đổi trạm phá hủy cache trạng thái ảo
     if "current_selected_station" not in st.session_state:
         st.session_state["current_selected_station"] = ""
 
     # ==============================================================================
-    # 3. BƯỚC 1: TÌM KIẾM TRẠM THÔNG MINH (Không dấu, không gạch ngang)
+    # 3. BƯỚC 1: TÌM KIẾM TRẠM
     # ==============================================================================
     st.write("### 🔍 Bước 1: Tìm Kiếm Trạm Khớp Chuỗi")
     search_keyword = st.text_input(
         "Nhập tên trạm hoặc mã trạm đối soát:", 
-        placeholder="💡 Ví dụ gõ liền: hynatianthi hệ thống vẫn nhận diện được..."
+        placeholder="💡 Ví dụ: hynatianthi hệ thống vẫn nhận diện được..."
     )
     
     selected_station_data = None
@@ -103,7 +100,7 @@ try:
                 matched_stations.append(s)
                 
         if not matched_stations:
-            st.warning("⚠️ Không tìm thấy trạm nào trùng khớp với từ khóa!")
+            st.warning("⚠️ Không tìm thấy trạm nào trùng khớp!")
         else:
             station_options = {s["ma_tram"]: s for s in matched_stations}
             choice = st.selectbox(f"💡 Tìm thấy ({len(matched_stations)}) trạm phù hợp:", list(station_options.keys()))
@@ -114,23 +111,23 @@ try:
         if choice != "-- Chọn trạm --":
             selected_station_data = all_stations[choice]
 
-    # Cơ chế Reset bộ đệm sửa đổi khi Sếp đổi sang trạm khác để tránh rác dữ liệu trạm cũ đè lên trạm mới
+    # Đổi trạm -> Reset bộ đệm để chống lỗi ghi đè chéo dữ liệu trạm cũ sang trạm mới
     if selected_station_data:
         if st.session_state["current_selected_station"] != selected_station_data["ma_tram"]:
             st.session_state["session_updates"] = {}
             st.session_state["current_selected_station"] = selected_station_data["ma_tram"]
 
     # ==============================================================================
-    # 4. BƯỚC 2: PHÂN CẤP DANH MỤC & HIỂN THỊ CHUẨN XÁC THEO HIỆN TRẠNG FILE EXCEL
+    # 4. BƯỚC 2: HIỂN THỊ KIỂM KÊ - KẾT HỢP DANH SÁCH SẴN CÓ VÀ Ô NHẬP TAY
     # ==============================================================================
     if selected_station_data:
         ma_tram = selected_station_data["ma_tram"]
         cells = selected_station_data["cells"]
         
         st.markdown(f"<div class='station-title'>🏠 ĐANG KIỂM KÊ: {ma_tram}</div>", unsafe_allow_html=True)
-        st.write(f"📅 *Ngày kiểm ghi nhận trên hệ thống: {cells.get(3, 'Trống')}*")
+        st.write(f"📅 *Ngày kiểm trên file gốc: {cells.get(3, 'Trống')}*")
         
-        # Tổ chức cây dữ liệu theo hàng 2 và hàng 3
+        # Tạo cấu trúc phân cấp cây
         tree_structure = {}
         for col_idx in range(4, len(headers_row2) + 1):
             p_name = headers_row2[col_idx - 1]
@@ -141,51 +138,58 @@ try:
                 tree_structure[p_name] = []
             tree_structure[p_name].append({"col_idx": col_idx, "child": c_name, "current_val": c_val})
             
-        st.write("### 📑 Bước 2: Khảo sát chi tiết cấu trúc phân cấp")
+        st.write("### 📑 Bước 2: Khảo sát & Tích chọn trạng thái")
         
         for parent_key, child_list in tree_structure.items():
-            # Đếm số lượng thực tế có sự thay đổi so với file gốc của trạm
             grp_changed = sum(1 for c in child_list if c["col_idx"] in st.session_state["session_updates"])
-            expander_title = f"📁 {parent_key} " + (f"({grp_changed} Đã sửa ✏️)" if grp_changed > 0 else "")
+            expander_title = f"📁 {parent_key} " + (f"({grp_changed} Thay đổi ✏️)" if grp_changed > 0 else "")
             
             with st.expander(expander_title, expanded=False):
                 for item in child_list:
                     c_id = item["col_idx"]
                     c_name = item["child"]
+                    file_actual_val = item["current_val"] # Giá trị hiện tại của trạm này (Có thể là "Trống")
                     
-                    # Lấy giá trị gốc của trạm từ file Excel
-                    file_actual_val = item["current_val"]
-                    
-                    # Thuật toán quét lọc sạch toàn bộ cột dữ liệu thô để lấy danh sách lựa chọn duy nhất có trong file
+                    # 🛠️ THUẬT TOÁN QUÉT TOÀN TỈNH: Lấy tất cả các mẫu dữ liệu từng tồn tại ở cột này
                     raw_values = df_total_raw.iloc[4:, c_id - 1].astype(str).str.strip()
                     cleaned_set = set()
                     for v in raw_values:
                         if v and v.lower() not in ["", "nan", "none", "trống"]:
                             cleaned_set.add(v)
                     
+                    # Sắp xếp danh sách chuẩn từ A-Z
                     unique_options = sorted(list(cleaned_set))
                     
-                    # Dự phòng nếu cột rỗng hoàn toàn trong Excel
+                    # Nếu cột này toàn tỉnh đang trống hoàn toàn, nạp sẵn vài từ khóa kiểm kê cơ bản làm mẫu
                     if not unique_options:
-                        unique_options = ["Trống", "Tốt", "Hỏng"]
-                    if "Trống" not in unique_options:
-                        unique_options.append("Trống")
+                        unique_options = ["Tốt", "Hỏng", "Có", "Không"]
                         
-                    # Đảm bảo giá trị thực tế của trạm bắt buộc phải có mặt trong tập danh sách chọn
+                    # Luôn đảm bảo có chữ "Trống" để nhân viên tích trả về trạng thái cũ nếu muốn
+                    if "Trống" not in unique_options:
+                        unique_options.insert(0, "Trống")
+                    
+                    # Đảm bảo giá trị thực tại của trạm (dù lạ hay quen) phải có trong danh sách chọn
                     if file_actual_val not in unique_options:
                         unique_options.insert(0, file_actual_val)
-                        
-                    # Đọc trạng thái đang tích chọn hiện tại (ưu tiên trạng thái trong bộ đệm session)
-                    current_active_val = st.session_state["session_updates"].get(c_id, file_actual_val)
-                    if current_active_val not in unique_options:
-                        unique_options.insert(0, current_active_val)
-                        
-                    # Xác định vị trí index chính xác tuyệt đối, tránh hiện tượng lệch index khi nhảy trạm
-                    default_idx = unique_options.index(current_active_val)
                     
-                    st.markdown(f"✏️ **{c_name}** *(Hiện trạng file gốc: `{file_actual_val}`)*", unsafe_allow_html=True)
+                    # 💥 ĐỘT PHÁ THỦ CÔNG: Thêm lựa chọn nhập tay vào cuối danh sách của tất cả các trường
+                    custom_input_trigger = "➕ Nhập mới (Không có trong danh sách)"
+                    if custom_input_trigger not in unique_options:
+                        unique_options.append(custom_input_trigger)
+                        
+                    # Lấy trạng thái đang hoạt động trong bộ đệm (nếu có)
+                    saved_val = st.session_state["session_updates"].get(c_id, file_actual_val)
                     
-                    # 🎯 KHẮC PHỤC LỖI TRƯỢT TRẠNG THÁI: Khóa Key bằng cách gộp Mã trạm + Cột ID + Giá trị gốc
+                    # Xác định vị trí index mặc định cho Radio Button
+                    if saved_val in unique_options:
+                        default_idx = unique_options.index(saved_val)
+                    else:
+                        # Nếu dữ liệu đang lưu là một chuỗi nhập tay hoàn toàn mới, chọn mục cuối cùng "Nhập mới"
+                        default_idx = unique_options.index(custom_input_trigger)
+                        
+                    st.markdown(f"✏️ **{c_name}** *(Trên file gốc: `{file_actual_val}`)*", unsafe_allow_html=True)
+                    
+                    # Hộp chọn Radio chính xác tuyệt đối theo mã trạm, không lo nhảy trạm loạn vị trí
                     user_choice = st.radio(
                         f"Chọn dữ liệu cho {c_name} tại cột {c_id}",
                         options=unique_options,
@@ -194,12 +198,35 @@ try:
                         label_visibility="collapsed"
                     )
                     
-                    # KIỂM TRA NGHIÊM NGẶT: Chỉ lưu vào bộ đệm sửa đổi khi giá trị chọn KHÁC GIÁ TRỊ GỐC TRÊN FILE của trạm đó
-                    if user_choice != file_actual_val:
-                        st.session_state["session_updates"][c_id] = user_choice
+                    final_value_to_save = user_choice
+                    
+                    # 💥 NẾU CHỌN NHẬP TAY: Mở hộp thoại text_input cho phép nhập tùy ý
+                    if user_choice == custom_input_trigger:
+                        st.markdown("<div class='input-hint'>✍️ Mời Sếp nhập dữ liệu mới phát sinh thực tế vào đây:</div>", unsafe_allow_html=True)
+                        
+                        # Lấy lại chuỗi nhập tay cũ đã gõ trước đó để không bị mất chữ khi cuộn màn hình
+                        old_typed_val = "" if saved_val == custom_input_trigger else saved_val
+                        if old_typed_val == file_actual_val:
+                            old_typed_val = ""
+                            
+                        typed_value = st.text_input(
+                            f"Nhập tay cho {c_name} cột {c_id}",
+                            value=old_typed_val,
+                            key=f"text_{ma_tram}_{c_id}",
+                            label_visibility="collapsed",
+                            placeholder="Gõ chủng loại, công suất, thông số mới tại đây..."
+                        ).strip()
+                        
+                        if typed_value:
+                            final_value_to_save = typed_value
+                        else:
+                            final_value_to_save = custom_input_trigger
+                            
+                    # SO SÁNH NGHIÊM NGẶT: Chỉ ghi nhận vào danh sách lưu trữ nếu nó thực sự Khác dữ liệu file gốc
+                    if final_value_to_save != file_actual_val and final_value_to_save != custom_input_trigger:
+                        st.session_state["session_updates"][c_id] = final_value_to_save
                     else:
-                        # Nếu người dùng chọn lại về đúng giá trị gốc trên file, xóa bỏ khỏi danh sách chỉnh sửa
-                        if c_id in st.session_state["session_updates"]:
+                        if c_id in st.session_state["session_updates"] and final_value_to_save == file_actual_val:
                             del st.session_state["session_updates"][c_id]
                             
                     st.write("---")
@@ -211,25 +238,26 @@ try:
         num_changes = len(st.session_state["session_updates"])
         
         if num_changes > 0:
-            st.info(f"📊 Hệ thống phát hiện có `{num_changes}` thuộc tính thực sự thay đổi so với file gốc.")
+            st.info(f"📊 Hệ thống ghi nhận có `{num_changes}` thuộc tính thực sự thay đổi hoặc thêm mới.")
             
             if st.button("💾 GHI NHẬN KẾT QUẢ & CẬP NHẬT KẾT XUẤT", use_container_width=True, type="primary"):
-                st.success(f"🎉 Thành công Sếp ơi! Hệ thống đã khóa và lưu chính xác kết quả thay đổi của trạm {ma_tram}!")
+                st.success(f"🎉 Xuất sắc Sếp ơi! Đã lưu chính xác dữ liệu kiểm kê (bao gồm cả các tài sản lắp mới bổ sung) của trạm {ma_tram}!")
                 st.balloons()
                 
+                # Bảng đối soát hiển thị trực tiếp cho nhân viên xem lại tại hiện trường
                 summary_data = []
                 for c_id, n_val in st.session_state["session_updates"].items():
                     summary_data.append({
                         "Cột số": c_id,
-                        "Danh mục lớn": headers_row2[c_id - 1],
+                        "Danh mục cha": headers_row2[c_id - 1],
                         "Hạng mục kiểm tra": headers_row3[c_id - 1],
-                        "Hiện trạng file gốc": cells.get(c_id),
-                        "Kết quả kiểm kê mới": n_val
+                        "Hiện trạng file cũ": cells.get(c_id),
+                        "Dữ liệu kiểm kê mới": n_val
                     })
-                st.write("**Bảng đối soát các trường thực sự thay đổi:**")
+                st.write("**Bảng đối soát dữ liệu ghi nhận tại hiện trường:**")
                 st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
         else:
-            st.success("✅ Hiện tại tất cả các thuộc tính hiển thị đều trùng khớp 100% với hiện trạng file Excel gốc, không có dữ liệu ảo tự ý cập nhật.")
+            st.success("✅ Trạm này hiện tại hoàn toàn khớp 100% với file Excel mẫu, không có tài sản nào phát sinh thêm.")
 
 except Exception as e:
     st.error(f"🚨 Hệ thống phát hiện lỗi đồng bộ: {e}")
