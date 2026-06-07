@@ -4,12 +4,16 @@ import pandas as pd
 st.title("📱 Kiểm kê Trạm - HYN")
 st.write("Dữ liệu kiểm kê:")
 
-# Đảm bảo link này là link Sếp copy từ thanh địa chỉ trình duyệt sau khi đã nhấn Share "Anyone with the link"
-sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit?usp=sharing"
-csv_url = sheet_url.replace('/edit#gid=', '/export?format=csv&gid=')
+# Link gốc của Sếp
+sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit"
+
+# Cách xử lý link "chắc chắn thắng"
+# Nếu link có /edit, ta thay bằng /export?format=csv
+csv_url = sheet_url.replace('/edit', '/export?format=csv')
 
 try:
     df = pd.read_csv(csv_url)
-    st.dataframe(df) # Dữ liệu sẽ hiện ra ở đây
+    st.dataframe(df)
 except Exception as e:
-    st.error("Không thể đọc được dữ liệu. Sếp kiểm tra lại link đã Share công khai chưa nhé!")
+    st.error(f"Lỗi đọc dữ liệu: {e}")
+    st.write("Sếp kiểm tra lại: File Google Sheet đã được để chế độ 'Anyone with the link' chưa?")
