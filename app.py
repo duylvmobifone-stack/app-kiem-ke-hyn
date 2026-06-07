@@ -2,19 +2,14 @@ import streamlit as st
 import pandas as pd
 
 st.title("📱 Kiểm kê Trạm - HYN")
+st.write("Dữ liệu kiểm kê:")
 
-# Thay đường link của Sếp vào đây
+# Đảm bảo link này là link Sếp copy từ thanh địa chỉ trình duyệt sau khi đã nhấn Share "Anyone with the link"
 sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit?usp=sharing"
 csv_url = sheet_url.replace('/edit#gid=', '/export?format=csv&gid=')
 
-# Đọc dữ liệu
-@st.cache_data(ttl=60) # Tự cập nhật lại dữ liệu mỗi 60 giây
-def load_data():
-    return pd.read_csv(csv_url)
-
 try:
-    df = load_data()
-    st.write("### Dữ liệu kiểm kê:")
-    st.dataframe(df) # Hiển thị bảng
+    df = pd.read_csv(csv_url)
+    st.dataframe(df) # Dữ liệu sẽ hiện ra ở đây
 except Exception as e:
-    st.error("Chưa đọc được dữ liệu. Sếp nhớ check link Google Sheets đã để ở chế độ 'Anyone with the link' chưa nhé!")
+    st.error("Không thể đọc được dữ liệu. Sếp kiểm tra lại link đã Share công khai chưa nhé!")
