@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Khóa chết màu nhấn hiển thị (Accent/Primary) từ Đỏ sang Xanh MobiFone
+# 💥 ĐỘT PHÁ CSS MỚI: Giữ giao diện gốc, ép nút chấm tròn nhỏ từ Đỏ sang Xanh MobiFone
 st.markdown("""
     <style>
     /* Nới rộng không gian hiển thị trên mobile */
@@ -43,43 +43,45 @@ st.markdown("""
     .prop-title { font-size: 15px; font-weight: 600; color: #212529; margin-bottom: 2px; margin-top: 5px; }
     .prop-old-val { font-size: 12px; color: #6c757d; margin-bottom: 6px; }
     
-    /* ÉP CÁC NÚT RADIO HIỂN THỊ HÀNG NGANG DẠNG THẺ CHẠM (FLEXBOX INLINE) */
+    /* 🎯 ĐƯA RADIO VỀ HÀNG NGANG TỰ NHIÊN (Bỏ hoàn toàn kiểu nút bấm vuông/viền/nền) */
     div[data-testid="stRadio"] > div {
         display: flex !important;
         flex-direction: row !important;
         flex-wrap: wrap !important;
-        gap: 6px !important;
+        gap: 15px !important; /* Khoảng cách rộng rãi giữa các lựa chọn */
+        background-color: transparent !important;
+        border: none !important;
+        padding: 5px 0 !important;
+    }
+    
+    /* Giữ nguyên cấu trúc chữ của label gốc */
+    div[data-testid="stRadio"] label {
         background-color: transparent !important;
         border: none !important;
         padding: 0 !important;
-    }
-    
-    /* Biến các item lựa chọn thành nút bấm bo góc xinh xắn giống App di động */
-    div[data-testid="stRadio"] label {
-        background-color: #ffffff !important;
-        border: 1px solid #ced4da !important;
-        padding: 6px 14px !important;
-        border-radius: 20px !important;
+        border-radius: 0 !important;
         cursor: pointer !important;
-        min-width: 60px;
-        text-align: center;
-        transition: all 0.2s ease;
+        min-width: auto !important;
     }
     
-    /* ĐỔI MÀU ĐỎ SANG XANH: Khi nút được TÍCH CHỌN, đổi nền xanh nhạt viền xanh đậm */
-    div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"]:checked + div {
-        background-color: #e6f0fa !important;
-        border: 1.5px solid #007bff !important;
-        border-radius: 20px !important;
+    /* 🎯 BIẾN CHẤM TRÒN ĐỎ THÀNH XANH MOBIFONE */
+    /* Màu viền vòng tròn ngoài khi được chọn */
+    div[data-testid="stRadio"] input[type="radio"]:checked + div {
+        border-color: #007bff !important;
+    }
+    /* Màu tâm chấm tròn nhỏ bên trong khi được chọn */
+    div[data-testid="stRadio"] input[type="radio"]:checked + div ::before {
+        background-color: #007bff !important;
     }
     
-    div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"]:checked + div p {
+    /* Đổi màu chữ của tùy chọn đang tích sang màu xanh cho đồng bộ */
+    div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"]:checked + div + div p {
         color: #007bff !important;
         font-weight: bold !important;
     }
     
-    /* Ẩn dấu chấm tròn Radio mặc định của trình duyệt */
-    div[data-testid="stRadio"] input[type="radio"] { display: none !important; }
+    /* Cho phép hiển thị lại vòng tròn check mặc định của Streamlit */
+    div[data-testid="stRadio"] input[type="radio"] { display: inline-block !important; }
     div[data-testid="stRadio"] div[data-testid="stMarkdownContainer"] p { font-size: 14px !important; margin: 0 !important; }
     
     /* Đường phân cách siêu mảnh gọn gàng */
@@ -129,7 +131,7 @@ def load_and_parse_sheets():
             "cells": cells_dict
         })
         
-    return row2, row3, data_rows, df_raw
+    return row2, row3, data_rows, df_total_raw
 
 try:
     headers_row2, headers_row3, rows_data, df_total_raw = load_and_parse_sheets()
@@ -213,44 +215,34 @@ try:
                     c_name = item["child"]
                     file_actual_val = item["current_val"] 
                     
-                    # Quét toàn tỉnh gom danh sách chọn sạch sẽ
                     raw_values = df_total_raw.iloc[4:, c_id - 1].astype(str).str.strip()
                     cleaned_set = set()
                     for v in raw_values:
                         if v and v.lower() not in ["", "nan", "none", "trống"]:
                             cleaned_set.add(v)
                     
-                    # 🎯 THUẬT TOÁN SẮP XẾP SỐ THÔNG MINH
                     numbers_list = []
                     strings_list = []
-                    
                     for v in cleaned_set:
-                        # Kiểm tra xem chuỗi có phải là số nguyên hoặc số thập phân không
                         if re.match(r'^\d+(\.\d+)?$', v):
                             numbers_list.append(float(v) if '.' in v else int(v))
                         else:
                             strings_list.append(v)
                     
-                    # Sắp xếp danh sách số theo toán học, danh sách chữ theo bảng chữ cái A-Z
                     numbers_list = sorted(numbers_list)
                     strings_list = sorted(strings_list)
-                    
-                    # Chuyển đổi ngược danh sách số về chuỗi và gộp lại
                     unique_options = [str(x) for x in numbers_list] + strings_list
                     
                     if not unique_options:
                         unique_options = ["Tốt", "Hỏng", "Có", "Không"]
                         
-                    # Đảm bảo chữ "Trống" luôn nằm ở đầu danh sách để dễ chọn
                     if "Trống" in unique_options:
                         unique_options.remove("Trống")
                     unique_options.insert(0, "Trống")
                     
-                    # Đảm bảo giá trị thực tế của trạm (nếu có sẵn) phải nằm trong danh mục chọn
                     if file_actual_val not in unique_options:
                         unique_options.insert(0, file_actual_val)
                     
-                    # Luôn đặt lựa chọn "Nhập mới" ở vị trí cuối cùng dưới đáy
                     custom_input_trigger = "➕ Nhập mới"
                     if custom_input_trigger in unique_options:
                         unique_options.remove(custom_input_trigger)
