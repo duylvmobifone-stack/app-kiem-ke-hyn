@@ -5,13 +5,14 @@ import pandas as pd
 st.set_page_config(page_title="Kiểm Kê Tài Sản HYN", layout="centered", initial_sidebar_state="collapsed")
 
 # CSS để giao diện hiển thị dạng Thẻ (Card) bo góc đẹp mắt trên điện thoại
+# SỬA ĐOẠN NÀY:
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; padding-bottom: 1rem; }
     .stCheckbox { background-color: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 5px; border: 1px solid #e9ecef; }
     .station-title { background-color: #007bff; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; }
     </style>
-""", unsafe_allow_width=True)
+""", unsafe_allow_html=True) # <-- Sửa chính xác thành unsafe_allow_html=True
 
 st.title("📱 Kiểm kê Trạm - HYN")
 
