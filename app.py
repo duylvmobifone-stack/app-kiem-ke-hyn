@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 💥 ĐỘT PHÁ CSS MỚI: Giữ giao diện gốc, ép nút chấm tròn nhỏ từ Đỏ sang Xanh MobiFone
+# Khóa chết màu nhấn hiển thị (Accent/Primary) từ Đỏ sang Xanh MobiFone, giữ giao diện gốc tròn thanh thoát
 st.markdown("""
     <style>
     /* Nới rộng không gian hiển thị trên mobile */
@@ -43,7 +43,7 @@ st.markdown("""
     .prop-title { font-size: 15px; font-weight: 600; color: #212529; margin-bottom: 2px; margin-top: 5px; }
     .prop-old-val { font-size: 12px; color: #6c757d; margin-bottom: 6px; }
     
-    /* 🎯 ĐƯA RADIO VỀ HÀNG NGANG TỰ NHIÊN (Bỏ hoàn toàn kiểu nút bấm vuông/viền/nền) */
+    /* ĐƯA RADIO VỀ HÀNG NGANG TỰ NHIÊN (Bỏ hoàn toàn kiểu nút bấm vuông/viền/nền) */
     div[data-testid="stRadio"] > div {
         display: flex !important;
         flex-direction: row !important;
@@ -64,7 +64,7 @@ st.markdown("""
         min-width: auto !important;
     }
     
-    /* 🎯 BIẾN CHẤM TRÒN ĐỎ THÀNH XANH MOBIFONE */
+    /* BIẾN CHẤM TRÒN ĐỎ THÀNH XANH MOBIFONE */
     /* Màu viền vòng tròn ngoài khi được chọn */
     div[data-testid="stRadio"] input[type="radio"]:checked + div {
         border-color: #007bff !important;
@@ -131,7 +131,8 @@ def load_and_parse_sheets():
             "cells": cells_dict
         })
         
-    return row2, row3, data_rows, df_total_raw
+    # 🎯 ĐÃ SỬA: Trả đúng tên biến nội bộ df_raw ra ngoài
+    return row2, row3, data_rows, df_raw
 
 try:
     headers_row2, headers_row3, rows_data, df_total_raw = load_and_parse_sheets()
@@ -221,6 +222,7 @@ try:
                         if v and v.lower() not in ["", "nan", "none", "trống"]:
                             cleaned_set.add(v)
                     
+                    # Thuật toán sắp xếp số thông minh
                     numbers_list = []
                     strings_list = []
                     for v in cleaned_set:
