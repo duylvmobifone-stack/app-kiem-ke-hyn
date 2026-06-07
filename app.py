@@ -11,17 +11,18 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Tối ưu giao diện hiển thị danh mục to rõ, trực quan trên điện thoại
+# Tối ưu giao diện hiển thị để các nút Radio Button khít nhau, dễ bấm trên màn hình nhỏ
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; padding-bottom: 1rem; }
     .station-title { background-color: #007bff; color: white; padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 15px; }
     .category-box { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef; }
-    .stRadio > div { background-color: white; padding: 8px; border-radius: 6px; border: 1px solid #dee2e6; margin-bottom: 8px; }
+    .stRadio > div { background-color: white; padding: 6px; border-radius: 6px; border: 1px solid #dee2e6; margin-bottom: 4px; }
+    div.stRadio p { font-size: 15px !important; margin-bottom: 2px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📱 Kiểm kê Phân Cấp Tự Động - HYN")
+st.title("📱 Kiểm kê Chuẩn Hóa 100% - HYN")
 
 # Link dữ liệu Google Sheets gốc của Sếp
 sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit"
@@ -29,7 +30,7 @@ csv_url = sheet_url.replace('/edit', '/export?format=csv')
 
 
 # ==============================================================================
-# 2. HÀM NẠP VÀ TRÍCH XUẤT GIÁ TRỊ TỰ ĐỘNG TỪ FILE EXCEL (SHEETS)
+# 2. HÀM NẠP VÀ PHÂN TÍCH DỮ LIỆU CHUẨN HÓA THEO FILE EXCEL
 # ==============================================================================
 @st.cache_data(ttl=10)
 def load_and_parse_sheets():
@@ -44,7 +45,7 @@ def load_and_parse_sheets():
     row2 = [str(val).strip() for val in df_raw.iloc[1]]
     row3 = [str(val).strip() for val in df_raw.iloc[2]]
     
-    # Thuật toán Forward Fill bổ sung tên Danh mục cha bị khuyết danh
+    # Thuật toán Forward Fill bổ sung tên Danh mục cha bị khuyết danh ở dòng 2
     current_parent = "Thông tin chung"
     for i in range(len(row2)):
         if row2[i] != "" and not row2[i].startswith("Unnamed"):
@@ -52,7 +53,7 @@ def load_and_parse_sheets():
         else:
             row2[i] = current_parent
 
-    # Trích xuất danh sách dữ liệu trạm thật (bắt đầu từ hàng 5)
+    # Trích xuất danh sách dữ liệu trạm thật (bắt đầu từ hàng dữ liệu số 5)
     data_rows = []
     for r_idx in range(4, df_raw.shape[0]):
         ma_tram = str(df_raw.iloc[r_idx, 1]).strip()
@@ -78,7 +79,7 @@ try:
         st.session_state["session_updates"] = {}
 
     # ==============================================================================
-    # 3. BƯỚC 1: TÌM KIẾM TRẠM THÔNG MINH (Bằng thuật toán loại bỏ khoảng cách/dấu gạch)
+    # 3. BƯỚC 1: TÌM KIẾM TRẠM THÔNG MINH
     # ==============================================================================
     st.write("### 🔍 Bước 1: Tìm Kiếm Trạm Khớp Chuỗi")
     search_keyword = st.text_input(
@@ -109,7 +110,7 @@ try:
             selected_station_data = all_stations[choice]
 
     # ==============================================================================
-    # 4. BƯỚC 2: TỰ ĐỘNG GOM GIÁ TRỊ LÀM DANH SÁCH LỰA CHỌN CÓ SẴN (Không gõ tay)
+    # 4. BƯỚC 2: PHÂN CẤP VÀ HIỂN THỊ LỰA CHỌN THUẦN TÚY THEO FILE EXCEL
     # ==============================================================================
     if selected_station_data:
         ma_tram = selected_station_data["ma_tram"]
@@ -142,31 +143,35 @@ try:
                     c_name = item["child"]
                     current_active_val = st.session_state["session_updates"].get(c_id, item["current_val"])
                     
-                    # 💥 ĐỘT PHÁ: Tự động quét toàn bộ cột này trong file Excel để lấy các giá trị duy nhất (Unique)
-                    # col_idx trong pandas dataframe bắt đầu từ 0 (nên là c_id - 1)
-                    raw_column_values = df_total_raw.iloc[4:, c_id - 1].dropna().astype(str).str.strip()
+                    # 🎯 CHUẨN HÓA 100%: Quét file thô lấy dữ liệu thực tế tại đúng cột này (bỏ qua 4 dòng đầu tiêu đề)
+                    raw_values = df_total_raw.iloc[4:, c_id - 1].astype(str).str.strip()
                     
-                    # Lọc bỏ giá trị trống hoặc nan
-                    unique_options = sorted(list(set([v for v in raw_column_values if v not in ["", "nan", "NaN", "Trống"]])))
+                    # Loại bỏ các giá trị rác, trống hoặc lỗi định dạng hệ thống
+                    cleaned_set = set()
+                    for v in raw_values:
+                        if v and v.lower() not in ["", "nan", "nan", "none", "trống"]:
+                            cleaned_set.add(v)
                     
-                    # Bảo đảm luôn có các trạng thái mặc định dự phòng nếu cột đó chưa có dữ liệu mẫu tốt
-                    for default_status in ["Tốt", "Hỏng", "Không", "Có"]:
-                        if default_status not in unique_options:
-                            unique_options.append(default_status)
+                    # Sắp xếp danh sách lựa chọn theo thứ tự A-Z để giao diện khoa học
+                    unique_options = sorted(list(cleaned_set))
                     
-                    # Đưa giá trị hiện tại của trạm lên đầu danh sách chọn nếu chưa có
+                    # Trường hợp dự phòng nếu cột này trong Excel trống hoàn toàn chưa có mẫu dữ liệu
+                    if not unique_options:
+                        unique_options = ["Chưa có dữ liệu", "Tốt", "Hỏng"]
+                    
+                    # Đảm bảo giá trị hiện tại của trạm PHẢI NẰM trong danh sách lựa chọn
                     if current_active_val not in unique_options and current_active_val not in ["", "Trống"]:
                         unique_options.insert(0, current_active_val)
                     
-                    # Tính toán vị trí index mặc định cho Radio
+                    # Tính toán vị trí hiển thị mặc định (Index) khớp với dữ liệu hiện tại của trạm
                     default_idx = 0
                     if current_active_val in unique_options:
                         default_idx = unique_options.index(current_active_val)
                     
-                    # Giao diện hiển thị
-                    st.markdown(f"✏️ **{c_name}** *(Giá trị cũ: `{item['current_val']}`)*", unsafe_allow_html=True)
+                    # Hiển thị tiêu đề thuộc tính con
+                    st.markdown(f"✏️ **{c_name}** *(Giá trị hiện tại: `{item['current_val']}`)*", unsafe_allow_html=True)
                     
-                    # Tạo hộp chọn chạm vuốt cực mượt từ các dữ liệu quét được
+                    # Tạo hộp chọn thông minh: Chỉ xuất hiện các giá trị thực tế của cột đó
                     user_choice = st.radio(
                         f"Chọn dữ liệu cho {c_name} tại cột {c_id}",
                         options=unique_options,
@@ -175,7 +180,7 @@ try:
                         label_visibility="collapsed"
                     )
                     
-                    # Lưu trữ thay đổi vào bộ nhớ đệm session
+                    # Đồng bộ cập nhật vào session_state của Streamlit
                     if user_choice != item["current_val"]:
                         st.session_state["session_updates"][c_id] = user_choice
                     else:
@@ -196,7 +201,7 @@ try:
                 st.success(f"🎉 Thành công Sếp ơi! Hệ thống đã khóa và lưu kết quả của trạm {ma_tram}!")
                 st.balloons()
                 
-                # In bảng tổng hợp trực quan ngay dưới màn hình mobile để xem lại
+                # In bảng đối soát trực quan ngay dưới màn hình mobile
                 summary_data = []
                 for c_id, n_val in st.session_state["session_updates"].items():
                     summary_data.append({
