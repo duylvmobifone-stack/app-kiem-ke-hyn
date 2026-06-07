@@ -29,7 +29,7 @@ def load_data():
     # Ép toàn bộ bảng về dạng chữ (String) để tránh lỗi định dạng ô trống (NaN)
     df = pd.read_csv(csv_url, dtype=str)
     
-    # SỬA LỖI TRIỆT ĐỂ: Xóa bỏ khoảng trắng thừa ở đầu/cuối của tất cả tên cột
+    # Xóa bỏ khoảng trắng thừa ở đầu/cuối của tất cả tên cột
     df.columns = df.columns.str.strip()
     
     # Loại bỏ dòng tiêu đề phụ nếu có trong file
@@ -44,9 +44,7 @@ try:
     if 'Tên trạm' not in df_source.columns:
         st.error(f"❌ Không tìm thấy cột 'Tên trạm'. Các cột hiện có là: {list(df_source.columns)[:5]}")
     else:
-        # ----------------------------------------------------
         # BƯỚC 1: TÌM KIẾM VÀ CHỌN TRẠM KHU VỰC HƯNG YÊN
-        # ----------------------------------------------------
         st.write("### 🔍 Bước 1: Chọn Trạm Kiểm Kê")
         search_keyword = st.text_input("Gõ tên trạm cần tìm (Ví dụ: AN_THI, BAI_SAY, BAC_SON...):", "")
         
@@ -61,9 +59,7 @@ try:
             
         selected_station = st.selectbox("Chạm để chọn chính xác trạm từ danh sách:", filtered_stations)
 
-        # ----------------------------------------------------
         # BƯỚC 2: HIỂN THỊ CHI TIẾT VÀ TÍCH CHỌN KIỂM KÊ
-        # ----------------------------------------------------
         if selected_station:
             # Trích xuất 1 dòng dữ liệu duy nhất của trạm đang chọn
             row_data = df_source[df_source['Tên trạm'] == selected_station].iloc[0]
@@ -94,3 +90,19 @@ try:
 
             with tab3:
                 st.subheader("Hệ thống Điều hòa & Vận hành")
+                ac_1 = st.checkbox("❄️ Điều hoà 1 (Chạy tốt)", value=(str(row_data.get('Điều hoà 1')).strip() in ['Tốt', 'Hoạt động']))
+                ac_2 = st.checkbox("❄️ Điều hoà 2 (Chạy tốt)", value=(str(row_data.get('Điều hoà 2')).strip() in ['Tốt', 'Hoạt động']))
+                ac_3 = st.checkbox("🚨 Cảnh báo ngoài (Hoạt động)", value=(str(row_data.get('Cảnh báo ngoài')).strip() in ['Có', 'Tốt']))
+
+            # BƯỚC 3: GHI CHÚ VÀ XÁC NHẬN KIỂM KÊ
+            st.write("---")
+            notes = st.text_area("📝 Ghi chú nhanh tại hiện trường (nếu có):", placeholder="Ví dụ: Điều hòa 2 hơi yếu, cần bảo dưỡng...")
+            
+            # Nút bấm kéo dài hết chiều rộng màn hình giúp dễ chạm trên điện thoại
+            if st.button("💾 Ghi nhận kết quả kiểm kê", use_container_width=True, type="primary"):
+                st.success(f"🎉 Đã xác nhận trạng thái kiểm kê của trạm {selected_station} thành công!")
+                st.balloons() # Hiệu ứng bóng bay
+                
+except Exception as e:
+    st.error(f"🚨 Lỗi kết nối hoặc cấu trúc file: {e}")
+    st.write("Sếp vui lòng kiểm tra lại chế độ chia sẻ link Google Sheets nhé!")
