@@ -1,36 +1,20 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
-# Cấu hình giao diện Mobile
-st.set_page_config(page_title="Kiểm kê MobiFone", layout="centered")
+st.title("📱 Kiểm kê Trạm - HYN")
 
-st.title("📱 Kiểm kê Trạm HYN")
+# Thay đường link của Sếp vào đây
+sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit?usp=sharing"
+csv_url = sheet_url.replace('/edit#gid=', '/export?format=csv&gid=')
 
-# Kết nối Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
+# Đọc dữ liệu
+@st.cache_data(ttl=60) # Tự cập nhật lại dữ liệu mỗi 60 giây
+def load_data():
+    return pd.read_csv(csv_url)
 
-# Đọc dữ liệu (Tải về và hiển thị)
 try:
-    df = conn.read(worksheet="Chi tiết") # Tên tab trong file Excel của Sếp
-    
-    # 1. Chọn trạm để làm việc
-    ma_tram = st.selectbox("📍 Chọn Mã trạm cần kiểm kê:", df['Ma_tram'].unique())
-    
-    # 2. Lọc dữ liệu trạm đó
-    tram_data = df[df['Ma_tram'] == ma_tram]
-    
-    # 3. Giao diện chỉnh sửa
-    st.write(f"### Dữ liệu của: {ma_tram}")
-    edited_df = st.data_editor(tram_data, num_rows="fixed")
-    
-    # 4. Nút lưu
-    if st.button("💾 Lưu dữ liệu vào Google Sheets"):
-        # Cập nhật lại vào Google Sheets
-        conn.update(worksheet="Chi tiết", data=edited_df)
-        st.success("✅ Đã cập nhật thành công!")
-        st.balloons()
-
+    df = load_data()
+    st.write("### Dữ liệu kiểm kê:")
+    st.dataframe(df) # Hiển thị bảng
 except Exception as e:
-    st.error(f"Lỗi kết nối: {e}")
-    st.info("💡 Sếp nhớ chia sẻ quyền truy cập file Google Sheets cho email: gs-connections@streamlit-gsheets.iam.gserviceaccount.com")
+    st.error("Chưa đọc được dữ liệu. Sếp nhớ check link Google Sheets đã để ở chế độ 'Anyone with the link' chưa nhé!")
