@@ -6,7 +6,7 @@ import re
 # 1. CẤU HÌNH TRANG & GIAO DIỆN CHUẨN MOBILE
 # ==============================================================================
 st.set_page_config(
-    page_title="Kiểm Kê Tài Sản HYN", 
+    page_title="Kiểm kê tài sản trạm MobiFone", 
     layout="centered", 
     initial_sidebar_state="collapsed"
 )
@@ -22,7 +22,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📱 Kiểm kê Thông minh & Linh hoạt - HYN")
+# Đổi tên tiêu đề ứng dụng ngắn gọn theo ý Sếp
+st.title("📱 Kiểm kê tài sản trạm MobiFone")
 
 # Đường dẫn file Google Sheets xuất dữ liệu CSV của Sếp
 sheet_url = "https://docs.google.com/spreadsheets/d/12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM/edit"
@@ -148,9 +149,9 @@ try:
                 for item in child_list:
                     c_id = item["col_idx"]
                     c_name = item["child"]
-                    file_actual_val = item["current_val"] # Giá trị hiện tại của trạm này (Có thể là "Trống")
+                    file_actual_val = item["current_val"] 
                     
-                    # 🛠️ THUẬT TOÁN QUÉT TOÀN TỈNH: Lấy tất cả các mẫu dữ liệu từng tồn tại ở cột này
+                    # THUẬT TOÁN QUÉT TOÀN TỈNH: Lấy tất cả các mẫu dữ liệu từng tồn tại ở cột này
                     raw_values = df_total_raw.iloc[4:, c_id - 1].astype(str).str.strip()
                     cleaned_set = set()
                     for v in raw_values:
@@ -172,7 +173,7 @@ try:
                     if file_actual_val not in unique_options:
                         unique_options.insert(0, file_actual_val)
                     
-                    # 💥 ĐỘT PHÁ THỦ CÔNG: Thêm lựa chọn nhập tay vào cuối danh sách của tất cả các trường
+                    # Thêm lựa chọn nhập tay vào cuối danh sách của tất cả các trường
                     custom_input_trigger = "➕ Nhập mới (Không có trong danh sách)"
                     if custom_input_trigger not in unique_options:
                         unique_options.append(custom_input_trigger)
@@ -184,7 +185,6 @@ try:
                     if saved_val in unique_options:
                         default_idx = unique_options.index(saved_val)
                     else:
-                        # Nếu dữ liệu đang lưu là một chuỗi nhập tay hoàn toàn mới, chọn mục cuối cùng "Nhập mới"
                         default_idx = unique_options.index(custom_input_trigger)
                         
                     st.markdown(f"✏️ **{c_name}** *(Trên file gốc: `{file_actual_val}`)*", unsafe_allow_html=True)
@@ -200,11 +200,10 @@ try:
                     
                     final_value_to_save = user_choice
                     
-                    # 💥 NẾU CHỌN NHẬP TAY: Mở hộp thoại text_input cho phép nhập tùy ý
+                    # NẾU CHỌN NHẬP TAY: Mở hộp thoại text_input cho phép nhập tùy ý
                     if user_choice == custom_input_trigger:
                         st.markdown("<div class='input-hint'>✍️ Mời Sếp nhập dữ liệu mới phát sinh thực tế vào đây:</div>", unsafe_allow_html=True)
                         
-                        # Lấy lại chuỗi nhập tay cũ đã gõ trước đó để không bị mất chữ khi cuộn màn hình
                         old_typed_val = "" if saved_val == custom_input_trigger else saved_val
                         if old_typed_val == file_actual_val:
                             old_typed_val = ""
