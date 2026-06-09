@@ -6,10 +6,11 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 def update_google_sheet(row_idx, updates):
-    # Streamlit tự hiểu dict nếu bạn dán JSON vào Secrets
-    creds_dict = st.secrets["GCP_SERVICE_ACCOUNT"] 
+    # Đọc trực tiếp từ secrets
+    creds_dict = st.secrets["GCP_SERVICE_ACCOUNT"]
     
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    # Sử dụng từ điển dict đã được Streamlit nạp sẵn
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     
