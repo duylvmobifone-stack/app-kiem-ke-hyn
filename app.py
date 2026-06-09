@@ -1,20 +1,20 @@
 import streamlit as st
 import pandas as pd
 import re
+import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# Hàm cập nhật dữ liệu vào Google Sheets
 def update_google_sheet(row_idx, updates):
-    # Cấu hình xác thực (đặt file credentials.json cùng thư mục)
+    # Đọc thông tin từ Secrets
+    creds_dict = json.loads(st.secrets["GCP_SERVICE_ACCOUNT"])
+    
+    # Xác thực bằng dictionary thay vì tên file
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     
-    # Mở file bằng ID lấy từ URL của bạn
     sheet = client.open_by_key("12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM").sheet1
-    
-    # Cập nhật từng ô
     for col_idx, new_value in updates.items():
         sheet.update_cell(row_idx, col_idx, new_value)
 # ==============================================================================
