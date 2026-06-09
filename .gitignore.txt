@@ -1,0 +1,4 @@
+credentials.json
+*.csv
+__pycache__
+.env

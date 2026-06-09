@@ -1,7 +1,22 @@
 import streamlit as st
 import pandas as pd
 import re
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
+# Hàm cập nhật dữ liệu vào Google Sheets
+def update_google_sheet(row_idx, updates):
+    # Cấu hình xác thực (đặt file credentials.json cùng thư mục)
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('credentials.json', scope)
+    client = gspread.authorize(creds)
+    
+    # Mở file bằng ID lấy từ URL của bạn
+    sheet = client.open_by_key("12MWZzFNSvSiYiJifJqjyYfMIvFYBPWE4oYO3TDPZZoM").sheet1
+    
+    # Cập nhật từng ô
+    for col_idx, new_value in updates.items():
+        sheet.update_cell(row_idx, col_idx, new_value)
 # ==============================================================================
 # 1. CẤU HÌNH GIAO DIỆN CHUẨN SMARTPHONE (MOBILE-FIRST UI)
 # ==============================================================================
@@ -293,16 +308,31 @@ try:
         # ==============================================================================
         # 5. BƯỚC 3: HOÀN TẤT KIỂM KÊ
         # ==============================================================================
-        st.write("### 💾 Bước 3: Hoàn Tất Kiểm Kê")
-        num_changes = len(st.session_state["session_updates"])
-        
-        if num_changes > 0:
-            st.info(f"📊 Có `{num_changes}` thuộc tính thay đổi.")
-            if st.button("💾 GHI NHẬN KẾT QUẢ & CẬP NHẬT KẾT XUẤT", use_container_width=True, type="primary"):
-                st.success(f"🎉 Đã lưu kết quả của trạm {ma_tram}!")
-                st.balloons()
-        else:
-            st.success("✅ Trạm trùng khớp 100% với file gốc.")
+        # ==============================================================================
+    # 5. BƯỚC 3: HOÀN TẤT KIỂM KÊ (CẬP NHẬT LÊN SHEET)
+    # ==============================================================================
+    st.write("### 💾 Bước 3: Hoàn Tất Kiểm Kê")
+    num_changes = len(st.session_state["session_updates"])
+    
+    if num_changes > 0:
+        st.info(f"📊 Có `{num_changes}` thuộc tính cần cập nhật.")
+        if st.button("💾 GHI NHẬN VÀO GOOGLE SHEETS", use_container_width=True, type="primary"):
+            with st.spinner("Đang kết nối và lưu dữ liệu..."):
+                try:
+                    # Gọi hàm đã khai báo ở đầu trang
+                    update_google_sheet(
+                        selected_station_data["row_idx"], 
+                        st.session_state["session_updates"]
+                    )
+                    st.success(f"🎉 Đã cập nhật thành công trạm {ma_tram}!")
+                    st.balloons()
+                    # Reset lại trạng thái sau khi lưu thành công
+                    st.session_state["session_updates"] = {}
+                    st.rerun() 
+                except Exception as e:
+                    st.error(f"🚨 Lỗi ghi dữ liệu: {e}")
+    else:
+        st.success("✅ Dữ liệu hiện tại đã khớp với hệ thống.")
 
 except Exception as e:
     st.error(f"🚨 Lỗi đồng bộ: {e}")
